@@ -58,24 +58,22 @@ def ipu_validation_options(replication_factor=1, device_iterations=1):
 
 def save_images(
     images,
-    num_prompts,
+    num_prompt,
     num_images_per_prompt,
     n_ipu,
-    inference_device_iterations,
+    inference_device_iteration,
     inference_replication_factor,
     prompt,
 ):
     num_images = len(images)
 
-    fig, axes = plt.subplots(
-        num_prompts, num_images_per_prompt, constrained_layout=True
-    )
+    fig, axes = plt.subplots(num_prompt, num_images_per_prompt, constrained_layout=True)
     # fig.set_size_inches(9, 9)
 
     for i, image in enumerate(images):
-        if num_prompts == 1 and num_images_per_prompt == 1:
+        if num_prompt == 1 and num_images_per_prompt == 1:
             ax = axes
-        elif num_prompts == 1:
+        elif num_prompt == 1:
             ax = axes[i % num_images_per_prompt]
         else:
             ax = axes[i // num_images_per_prompt, i % num_images_per_prompt]
@@ -97,7 +95,7 @@ def save_images(
     fig.savefig(
         os.path.join(
             image_dir,
-            f"n_ipu_{n_ipu}_num_prompts_{num_prompts}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iterations_{inference_device_iterations}_inference_replication_factor_{inference_replication_factor}.png",
+            f"n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iteration_{inference_device_iteration}_inference_replication_factor_{inference_replication_factor}.png",
         ),
         dpi=150,
     )
@@ -116,72 +114,68 @@ def main():
     cache_dir = os.path.join(current_dir, "cache")
     utils.mkdir_if_not_exists(cache_dir)
 
-    # Options
-    replication_factor = 1
-    device_iterations = 1
-    inference_options = ipu_validation_options(replication_factor, device_iterations)
-
     n_ipus = [2**i for i in range(5)]
-    num_prompts = 1
+    # num_prompts = 1
     num_images_per_prompts = [2**i for i in range(4)]
     inference_device_iterations = [2**i for i in range(4)]
     inference_replication_factors = [2**i for i in range(4)]
 
-    for inference_replication_factor in inference_replication_factors:
-        for inference_device_iteration in inference_device_iterations:
-            for num_images_per_prompt in num_images_per_prompts:
-                for n_ipu in n_ipus:
-                    logger.log(
-                        f"\nn_ipu_{n_ipu}_num_prompts_{num_prompts}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iterations_{inference_device_iterations}_inference_replication_factor_{inference_replication_factor}"
-                    )
-                    common_ipu_config_kwargs = {
-                        "enable_half_partials": True,
-                        "executable_cache_dir": "./exe_cache",
-                        "inference_device_iterations": inference_device_iterations,
-                        "inference_replication_factor": inference_replication_factor,
-                    }
+    for num_prompt in range(1, 2):
+        for inference_replication_factor in inference_replication_factors:
+            for inference_device_iteration in inference_device_iterations:
+                for num_images_per_prompt in num_images_per_prompts:
+                    for n_ipu in n_ipus:
+                        logger.log(
+                            f"\nn_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iteration_{inference_device_iteration}_inference_replication_factor_{inference_replication_factor}"
+                        )
+                        common_ipu_config_kwargs = {
+                            "enable_half_partials": True,
+                            "executable_cache_dir": "./exe_cache",
+                            "inference_device_iterations": inference_device_iteration,
+                            "inference_replication_factor": inference_replication_factor,
+                        }
 
-                    pipe = IPUStableDiffusionPipeline.from_pretrained(
-                        "stabilityai/stable-diffusion-2",
-                        revision="fp16",
-                        torch_dtype=torch.float16,
-                        cache_dir=cache_dir,
-                        n_ipu=n_ipu,
-                        num_prompts=num_prompts,
-                        num_images_per_prompt=num_images_per_prompt,
-                        # unet_ipu_config=None,
-                        # text_encoder_ipu_config=None,
-                        # vae_ipu_config=None,
-                        # safety_checker_ipu_config=None,
-                        common_ipu_config_kwargs=common_ipu_config_kwargs,
-                    )
-                    pipe.enable_attention_slicing()
+                        pipe = IPUStableDiffusionPipeline.from_pretrained(
+                            "stabilityai/stable-diffusion-2",
+                            revision="fp16",
+                            torch_dtype=torch.float16,
+                            cache_dir=cache_dir,
+                            n_ipu=n_ipu,
+                            num_prompts=num_prompt,
+                            num_images_per_prompt=num_images_per_prompt,
+                            # unet_ipu_config=None,
+                            # text_encoder_ipu_config=None,
+                            # vae_ipu_config=None,
+                            # safety_checker_ipu_config=None,
+                            common_ipu_config_kwargs=common_ipu_config_kwargs,
+                        )
+                        pipe.enable_attention_slicing()
 
-                    # image_width = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_WIDTH", default=512)
-                    # image_height = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_HEIGHT", default=512)
-                    image_width = 768  # stabilityai/stable-diffusion-2
-                    image_height = 768  # stabilityai/stable-diffusion-2
-                    pipe(
-                        "apple",
-                        height=image_height,
-                        width=image_width,
-                        guidance_scale=7.5,
-                    )
+                        # image_width = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_WIDTH", default=512)
+                        # image_height = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_HEIGHT", default=512)
+                        image_width = 768  # stabilityai/stable-diffusion-2
+                        image_height = 768  # stabilityai/stable-diffusion-2
+                        pipe(
+                            "apple",
+                            height=image_height,
+                            width=image_width,
+                            guidance_scale=7.5,
+                        )
 
-                    prompt = "a shiba inu in a zen garden, acrylic painting"
-                    with timer.Timer(logger_fn=logger.log):
-                        images = pipe(prompt, guidance_scale=7.5).images
+                        prompt = "a shiba inu in a zen garden, acrylic painting"
+                        with timer.Timer(logger_fn=logger.log):
+                            images = pipe(prompt, guidance_scale=7.5).images
 
-                    save_images(
-                        images,
-                        num_prompts,
-                        num_images_per_prompt,
-                        n_ipu,
-                        inference_device_iterations,
-                        inference_replication_factor,
-                        prompt,
-                    )
-                    pipe.detach_from_device()
+                        save_images(
+                            images,
+                            num_prompt,
+                            num_images_per_prompt,
+                            n_ipu,
+                            inference_device_iteration,
+                            inference_replication_factor,
+                            prompt,
+                        )
+                        pipe.detach_from_device()
 
 
 if __name__ == "__main__":

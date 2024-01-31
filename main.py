@@ -26,6 +26,7 @@ def mkdir_if_not_exists(path):
     if not os.path.exists(path):
         os.mkdir(path)
 
+
 def ipu_validation_options(replication_factor=1, device_iterations=1):
     opts = poptorch.Options()
     opts.randomSeed(42)
@@ -53,7 +54,7 @@ def ipu_validation_options(replication_factor=1, device_iterations=1):
     # opts.enableExecutableCaching(CACHE_DIR)
 
     return opts
-    
+
 
 def save_images(images, num_prompts, num_images_per_prompt, n_ipu, prompt):
     num_images = len(images)
@@ -94,6 +95,7 @@ def save_images(images, num_prompts, num_images_per_prompt, n_ipu, prompt):
     )
     plt.close()
 
+
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -104,61 +106,62 @@ if __name__ == "__main__":
 
     cache_dir = os.path.join(current_dir, "cache")
     utils.mkdir_if_not_exists(cache_dir)
-    
+
     # Options
     replication_factor = 1
     device_iterations = 1
     inference_options = ipu_validation_options(replication_factor, device_iterations)
-    
+
     n_ipus = [2**i for i in range(5)]
     num_prompts = 1
-    num_images_per_prompt = 1
+    num_images_per_prompts = [2**i for i in range(4)]
     inference_device_iterations = 1
     inference_replication_factor = 1
-    
-    for n_ipu in n_ipus:
-        logger.log(f"\nn_ipu_{n_ipu}_num_prompts_{num_prompts}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iterations{inference_device_iterations}_inference_replication_factor{inference_replication_factor}")
-        common_ipu_config_kwargs = {
-            "enable_half_partials": True,
-            "executable_cache_dir": "./exe_cache",
-            "inference_device_iterations": inference_device_iterations,
-            "inference_replication_factor": inference_replication_factor,
-        }
-        
-        pipe = IPUStableDiffusionPipeline.from_pretrained(
-            "stabilityai/stable-diffusion-2",  
-            revision="fp16",  
-            torch_dtype=torch.float16,
-            cache_dir=cache_dir,
-            n_ipu=n_ipu,
-            num_prompts=num_prompts,
-            num_images_per_prompt=num_images_per_prompt,
-            # unet_ipu_config=None,
-            # text_encoder_ipu_config=None,
-            # vae_ipu_config=None,
-            # safety_checker_ipu_config=None,
-            common_ipu_config_kwargs=common_ipu_config_kwargs,
-        )
-        pipe.enable_attention_slicing()
-        
-        # image_width = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_WIDTH", default=512)
-        # image_height = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_HEIGHT", default=512)
-        image_width = 768 # stabilityai/stable-diffusion-2
-        image_height = 768 # stabilityai/stable-diffusion-2
-        pipe("apple", height=image_height, width=image_width, guidance_scale=7.5)
-        
-        prompt = "a shiba inu in a zen garden, acrylic painting" 
-        with timer.Timer(logger_fn=logger.log):
-            images = pipe(prompt, guidance_scale=7.5).images
-        
-        save_images(images, num_prompts, num_images_per_prompt, n_ipu, prompt)
-        pipe.detach_from_device()
-        if n_ipu == 4:
-            break
+    for num_images_per_prompt in num_images_per_prompts:
+        for n_ipu in n_ipus:
+            logger.log(
+                f"\nn_ipu_{n_ipu}_num_prompts_{num_prompts}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iterations{inference_device_iterations}_inference_replication_factor{inference_replication_factor}"
+            )
+            common_ipu_config_kwargs = {
+                "enable_half_partials": True,
+                "executable_cache_dir": "./exe_cache",
+                "inference_device_iterations": inference_device_iterations,
+                "inference_replication_factor": inference_replication_factor,
+            }
+
+            pipe = IPUStableDiffusionPipeline.from_pretrained(
+                "stabilityai/stable-diffusion-2",
+                revision="fp16",
+                torch_dtype=torch.float16,
+                cache_dir=cache_dir,
+                n_ipu=n_ipu,
+                num_prompts=num_prompts,
+                num_images_per_prompt=num_images_per_prompt,
+                # unet_ipu_config=None,
+                # text_encoder_ipu_config=None,
+                # vae_ipu_config=None,
+                # safety_checker_ipu_config=None,
+                common_ipu_config_kwargs=common_ipu_config_kwargs,
+            )
+            pipe.enable_attention_slicing()
+
+            # image_width = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_WIDTH", default=512)
+            # image_height = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_HEIGHT", default=512)
+            image_width = 768  # stabilityai/stable-diffusion-2
+            image_height = 768  # stabilityai/stable-diffusion-2
+            pipe("apple", height=image_height, width=image_width, guidance_scale=7.5)
+
+            prompt = "a shiba inu in a zen garden, acrylic painting"
+            with timer.Timer(logger_fn=logger.log):
+                images = pipe(prompt, guidance_scale=7.5).images
+
+            save_images(images, num_prompts, num_images_per_prompt, n_ipu, prompt)
+            pipe.detach_from_device()
+
         # fig, ax = plt.subplots(1,1)
         # fig.set_size_inches(9, 9)
         # ax.imshow(image)
-        
+
         # ax.set_title(f"Prompt: {prompt}")
         # ax.axis("off")
         # image_dir = "./images"
@@ -166,7 +169,6 @@ if __name__ == "__main__":
         # fig.savefig(os.path.join(image_dir, f"n_ipu_{n_ipu}_num_prompts_{num_prompts}_num_images_per_prompt_{num_images_per_prompt}.png"), dpi=150)
         # plt.close()
 
-    
     # # pretrained model and scheduler
     # vae = PipelinedVAE.from_pretrained(
     #     "CompVis/stable-diffusion-v1-4",
@@ -196,17 +198,17 @@ if __name__ == "__main__":
     #     subfolder="scheduler",
     #     cache_dir=cache_dir,
     # )
-    
+
     # ipu_conf = {}
-    
+
     # text_encoder.parallelize(ipu_conf)
     # unet.parallelize(ipu_conf)
     # vae.parallelize(ipu_conf)
-    
+
     # inf_text_encoder = poptorch.inferenceModel(text_encoder, inference_options)
     # inf_unet = poptorch.inferenceModel(unet, inference_options)
     # inf_vae = poptorch.inferenceModel(vae, inference_options)
-    
+
     # # Text embeddings
     # prompt = ["a horse eats an apple in the snow"]
     # height = 512
@@ -215,7 +217,7 @@ if __name__ == "__main__":
     # guidance_scale = 7.5
     # generator = torch.manual_seed(0)
     # batch_size = len(prompt)
-    
+
     # # Text embeddings
     # text_inputs = tokenizer(
     #     prompt,
@@ -248,8 +250,7 @@ if __name__ == "__main__":
     # logger.log(f"uncond_embeddings.shape: {uncond_embeddings.shape}")
 
     # text_embeddings = torch.cat([uncond_embeddings, text_embeddings])
-    
-    
+
     # # random noise
     # latents = torch.randn(
     #     (batch_size, inf_unet.config.in_channels, height // 8, width // 8),
@@ -261,7 +262,7 @@ if __name__ == "__main__":
     # scheduler.set_timesteps(num_inference_steps)
 
     # logger.log(f"scheduler.timesteps: \n{scheduler.timesteps}\n")
-    
+
     # for t in scheduler.timesteps:
     #     # expand the latents if we are doing classifier-free guidance to avoid doing two forward passes.
     #     latent_model_inputs = torch.cat([latents] * 2)
@@ -281,7 +282,7 @@ if __name__ == "__main__":
 
     #     # compute the prev noisy sample x_t -> x_t - 1
     #     latents = scheduler.step(noise_pred, t, latents).prev_sample
-        
+
     # # Decode the image
     # latents = 1 / 0.18215 * latents
     # with torch.no_grad():

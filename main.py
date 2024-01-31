@@ -104,13 +104,14 @@ def save_images(
     plt.close()
 
 
-if __name__ == "__main__":
+@timer.Timer(logger_fn=logger.log)
+def main():
     current_dir = os.path.dirname(os.path.realpath(__file__))
 
-    # Set up
-    log_dir = os.path.join(current_dir, "logs")
-    utils.mkdir_if_not_exists(log_dir)
-    logger.configure(dir=log_dir)
+    # # Set up
+    # log_dir = os.path.join(current_dir, "logs")
+    # utils.mkdir_if_not_exists(log_dir)
+    # logger.configure(dir=log_dir)
 
     cache_dir = os.path.join(current_dir, "cache")
     utils.mkdir_if_not_exists(cache_dir)
@@ -182,16 +183,15 @@ if __name__ == "__main__":
                     )
                     pipe.detach_from_device()
 
-        # fig, ax = plt.subplots(1,1)
-        # fig.set_size_inches(9, 9)
-        # ax.imshow(image)
 
-        # ax.set_title(f"Prompt: {prompt}")
-        # ax.axis("off")
-        # image_dir = "./images"
-        # utils.mkdir_if_not_exists(image_dir)
-        # fig.savefig(os.path.join(image_dir, f"n_ipu_{n_ipu}_num_prompts_{num_prompts}_num_images_per_prompt_{num_images_per_prompt}.png"), dpi=150)
-        # plt.close()
+if __name__ == "__main__":
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+
+    # Set up
+    log_dir = os.path.join(current_dir, "logs")
+    utils.mkdir_if_not_exists(log_dir)
+    logger.configure(dir=log_dir)
+    main()
 
     # # pretrained model and scheduler
     # vae = PipelinedVAE.from_pretrained(

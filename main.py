@@ -144,12 +144,13 @@ def benchmark(
     # image_height = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_HEIGHT", default=512)
     image_width = 768  # stabilityai/stable-diffusion-2
     image_height = 768  # stabilityai/stable-diffusion-2
-    pipe(
-        prompt,
-        # height=image_height,
-        # width=image_width,
-        guidance_scale=7.5,
-    )
+    # pipe(
+    #     prompt,
+    #     # height=image_height,
+    #     # width=image_width,
+    #     guidance_scale=7.5,
+    # )
+    images = pipe(prompt, guidance_scale=7.5).images
 
     with timer.Timer(logger_fn=logger.log):
         images = pipe(prompt, guidance_scale=7.5).images

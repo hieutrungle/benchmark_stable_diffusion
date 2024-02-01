@@ -103,7 +103,7 @@ def save_images(
     plt.close()
 
 
-@timeout.timeout(5)
+@timeout.timeout()
 def benchmark(
     num_prompt,
     num_images_per_prompt,
@@ -170,9 +170,11 @@ def main():
     n_ipus = [2**i for i in range(5)]
     # num_prompts = 1
     num_images_per_prompts = [4]
+    inference_device_iterations = [2**i for i in range(1)]
+    inference_replication_factors = [2**i for i in range(1)]
     # num_images_per_prompts = [2**i for i in range(4)]
-    inference_device_iterations = [2**i for i in range(4)]
-    inference_replication_factors = [2**i for i in range(4)]
+    # inference_device_iterations = [2**i for i in range(4)]
+    # inference_replication_factors = [2**i for i in range(4)]
 
     prompt = "a shiba inu in a zen garden, acrylic painting"
 
@@ -184,14 +186,23 @@ def main():
                         logger.log(
                             f"\nn_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iteration_{inference_device_iteration}_inference_replication_factor_{inference_replication_factor}"
                         )
-                        benchmark(
-                            num_prompt,
-                            num_images_per_prompt,
-                            n_ipu,
-                            inference_device_iteration,
-                            inference_replication_factor,
-                            prompt,
-                        )
+                        try:
+                            benchmark(
+                                num_prompt,
+                                num_images_per_prompt,
+                                n_ipu,
+                                inference_device_iteration,
+                                inference_replication_factor,
+                                prompt,
+                            )
+                        except timeout.TimeoutError:
+                            logger.log(
+                                f"Timeout: n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iteration_{inference_device_iteration}_inference_replication_factor_{inference_replication_factor}"
+                            )
+                        except Exception as e:
+                            logger.log(
+                                f"Exception: {e} for n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iteration_{inference_device_iteration}_inference_replication_factor_{inference_replication_factor}"
+                            )
 
 
 if __name__ == "__main__":

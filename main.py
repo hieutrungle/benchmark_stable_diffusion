@@ -16,6 +16,7 @@ import torchvision
 import poptorch
 import matplotlib.pyplot as plt
 import timer
+import timeout
 
 from models import PipelinedVAE, PipelinedCLIPTextModel, PipelinedUnet
 
@@ -102,24 +103,78 @@ def save_images(
     plt.close()
 
 
-@timer.Timer(logger_fn=logger.log)
-def main():
+@timeout.timeout(5)
+def benchmark(
+    num_prompt,
+    num_images_per_prompt,
+    n_ipu,
+    inference_device_iteration,
+    inference_replication_factor,
+    prompt,
+):
     current_dir = os.path.dirname(os.path.realpath(__file__))
-
-    # # Set up
-    # log_dir = os.path.join(current_dir, "logs")
-    # utils.mkdir_if_not_exists(log_dir)
-    # logger.configure(dir=log_dir)
-
     cache_dir = os.path.join(current_dir, "cache")
     utils.mkdir_if_not_exists(cache_dir)
 
+    common_ipu_config_kwargs = {
+        "enable_half_partials": True,
+        "executable_cache_dir": "./exe_cache",
+        "inference_device_iterations": inference_device_iteration,
+        "inference_replication_factor": inference_replication_factor,
+    }
+
+    pipe = IPUStableDiffusionPipeline.from_pretrained(
+        "stabilityai/stable-diffusion-2",
+        revision="fp16",
+        torch_dtype=torch.float16,
+        cache_dir=cache_dir,
+        n_ipu=n_ipu,
+        num_prompts=num_prompt,
+        num_images_per_prompt=num_images_per_prompt,
+        # unet_ipu_config=None,
+        # text_encoder_ipu_config=None,
+        # vae_ipu_config=None,
+        # safety_checker_ipu_config=None,
+        common_ipu_config_kwargs=common_ipu_config_kwargs,
+    )
+    pipe.enable_attention_slicing()
+
+    # image_width = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_WIDTH", default=512)
+    # image_height = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_HEIGHT", default=512)
+    image_width = 768  # stabilityai/stable-diffusion-2
+    image_height = 768  # stabilityai/stable-diffusion-2
+    pipe(
+        "apple",
+        height=image_height,
+        width=image_width,
+        guidance_scale=7.5,
+    )
+
+    with timer.Timer(logger_fn=logger.log):
+        images = pipe(prompt, guidance_scale=7.5).images
+
+    save_images(
+        images,
+        num_prompt,
+        num_images_per_prompt,
+        n_ipu,
+        inference_device_iteration,
+        inference_replication_factor,
+        prompt,
+    )
+    pipe.detach_from_device()
+
+
+@timer.Timer(logger_fn=logger.log)
+def main():
     n_ipus = [2**i for i in range(5)]
     # num_prompts = 1
-    num_images_per_prompts = 4
+    num_images_per_prompts = [4]
     # num_images_per_prompts = [2**i for i in range(4)]
     inference_device_iterations = [2**i for i in range(4)]
     inference_replication_factors = [2**i for i in range(4)]
+
+    prompt = "a shiba inu in a zen garden, acrylic painting"
 
     for num_prompt in range(1, 2):
         for inference_replication_factor in inference_replication_factors:
@@ -129,46 +184,7 @@ def main():
                         logger.log(
                             f"\nn_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iteration_{inference_device_iteration}_inference_replication_factor_{inference_replication_factor}"
                         )
-                        common_ipu_config_kwargs = {
-                            "enable_half_partials": True,
-                            "executable_cache_dir": "./exe_cache",
-                            "inference_device_iterations": inference_device_iteration,
-                            "inference_replication_factor": inference_replication_factor,
-                        }
-
-                        pipe = IPUStableDiffusionPipeline.from_pretrained(
-                            "stabilityai/stable-diffusion-2",
-                            revision="fp16",
-                            torch_dtype=torch.float16,
-                            cache_dir=cache_dir,
-                            n_ipu=n_ipu,
-                            num_prompts=num_prompt,
-                            num_images_per_prompt=num_images_per_prompt,
-                            # unet_ipu_config=None,
-                            # text_encoder_ipu_config=None,
-                            # vae_ipu_config=None,
-                            # safety_checker_ipu_config=None,
-                            common_ipu_config_kwargs=common_ipu_config_kwargs,
-                        )
-                        pipe.enable_attention_slicing()
-
-                        # image_width = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_WIDTH", default=512)
-                        # image_height = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_HEIGHT", default=512)
-                        image_width = 768  # stabilityai/stable-diffusion-2
-                        image_height = 768  # stabilityai/stable-diffusion-2
-                        pipe(
-                            "apple",
-                            height=image_height,
-                            width=image_width,
-                            guidance_scale=7.5,
-                        )
-
-                        prompt = "a shiba inu in a zen garden, acrylic painting"
-                        with timer.Timer(logger_fn=logger.log):
-                            images = pipe(prompt, guidance_scale=7.5).images
-
-                        save_images(
-                            images,
+                        benchmark(
                             num_prompt,
                             num_images_per_prompt,
                             n_ipu,
@@ -176,7 +192,6 @@ def main():
                             inference_replication_factor,
                             prompt,
                         )
-                        pipe.detach_from_device()
 
 
 if __name__ == "__main__":

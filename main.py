@@ -145,9 +145,9 @@ def benchmark(
     image_width = 768  # stabilityai/stable-diffusion-2
     image_height = 768  # stabilityai/stable-diffusion-2
     pipe(
-        "apple",
-        height=image_height,
-        width=image_width,
+        prompt,
+        # height=image_height,
+        # width=image_width,
         guidance_scale=7.5,
     )
 

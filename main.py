@@ -104,7 +104,7 @@ def save_images(
     plt.close()
 
 
-@timeout.timeout(60)
+@timeout.timeout(60 * 30)
 def benchmark(
     num_prompt,
     num_images_per_prompt,
@@ -170,7 +170,7 @@ def benchmark(
 def main():
     n_ipus = [2**i for i in range(5)]
     # num_prompts = 1
-    num_images_per_prompts = [4]
+    num_images_per_prompts = [8]
     inference_device_iterations = [4]
     inference_replication_factors = [2**i for i in range(1)]
     # num_images_per_prompts = [2**i for i in range(4)]

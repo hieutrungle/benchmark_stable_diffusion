@@ -1,6 +1,6 @@
 import signal
 
-DEBUG = True
+DEBUG = False
 
 
 # Custom exception. In general, it's a good practice.

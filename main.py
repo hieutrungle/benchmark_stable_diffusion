@@ -63,7 +63,6 @@ def save_images(
     num_prompt,
     num_images_per_prompt,
     n_ipu,
-    inference_device_iteration,
     inference_replication_factor,
     prompt,
 ):
@@ -97,7 +96,7 @@ def save_images(
     fig.savefig(
         os.path.join(
             image_dir,
-            f"n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iteration_{inference_device_iteration}_inference_replication_factor_{inference_replication_factor}.png",
+            f"n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_replication_factor_{inference_replication_factor}.png",
         ),
         dpi=150,
     )

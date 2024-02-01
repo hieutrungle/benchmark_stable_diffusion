@@ -109,7 +109,6 @@ def benchmark(
     num_prompt,
     num_images_per_prompt,
     n_ipu,
-    inference_device_iteration,
     inference_replication_factor,
     prompt,
 ):
@@ -120,7 +119,6 @@ def benchmark(
     common_ipu_config_kwargs = {
         "enable_half_partials": True,
         "executable_cache_dir": "./exe_cache",
-        "inference_device_iterations": inference_device_iteration,
         "inference_replication_factor": inference_replication_factor,
     }
 
@@ -150,7 +148,7 @@ def benchmark(
     #     # width=image_width,
     #     guidance_scale=7.5,
     # )
-    images = pipe(prompt, guidance_scale=7.5).images
+    pipe(prompt, guidance_scale=7.5)
 
     with timer.Timer(logger_fn=logger.log):
         images = pipe(prompt, guidance_scale=7.5).images
@@ -160,7 +158,6 @@ def benchmark(
         num_prompt,
         num_images_per_prompt,
         n_ipu,
-        inference_device_iteration,
         inference_replication_factor,
         prompt,
     )
@@ -171,43 +168,38 @@ def benchmark(
 def main():
     n_ipus = [2**i for i in range(5)]
     # num_prompts = 1
-    num_images_per_prompts = [8]
-    inference_device_iterations = [4]
+    num_images_per_prompts = [2**i for i in range(5)]
     inference_replication_factors = [2**i for i in range(1)]
     # num_images_per_prompts = [2**i for i in range(4)]
     # inference_device_iterations = [2**i for i in range(4)]
     # inference_replication_factors = [2**i for i in range(4)]
 
-    prompt = ["a shiba inu in a zen garden, acrylic painting"] * num_images_per_prompts[
-        0
-    ]
-
     for num_prompt in range(1, 2):
         for inference_replication_factor in inference_replication_factors:
-            for inference_device_iteration in inference_device_iterations:
-                for num_images_per_prompt in num_images_per_prompts:
-                    for n_ipu in n_ipus:
-                        logger.log(
-                            f"\nn_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iteration_{inference_device_iteration}_inference_replication_factor_{inference_replication_factor}"
+            for num_images_per_prompt in num_images_per_prompts:
+                prompt["a shiba inu in a zen garden, acrylic painting"]
+                prompt = [prompt[0]] * num_images_per_prompt
+                for n_ipu in n_ipus:
+                    logger.log(
+                        f"\nn_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_replication_factor_{inference_replication_factor}"
+                    )
+                    try:
+                        benchmark(
+                            num_prompt,
+                            num_images_per_prompt,
+                            n_ipu,
+                            inference_replication_factor,
+                            prompt,
                         )
-                        try:
-                            benchmark(
-                                num_prompt,
-                                num_images_per_prompt,
-                                n_ipu,
-                                inference_device_iteration,
-                                inference_replication_factor,
-                                prompt,
-                            )
-                        except timeout.TimeoutError:
-                            logger.log(
-                                f"Timeout: n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iteration_{inference_device_iteration}_inference_replication_factor_{inference_replication_factor}"
-                            )
-                        except Exception as e:
-                            traceback.print_exc()
-                            logger.log(
-                                f"Error: n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iteration_{inference_device_iteration}_inference_replication_factor_{inference_replication_factor}"
-                            )
+                    except timeout.TimeoutError:
+                        logger.log(
+                            f"Timeout: n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_replication_factor_{inference_replication_factor}"
+                        )
+                    except Exception as e:
+                        traceback.print_exc()
+                        logger.log(
+                            f"Error: n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_replication_factor_{inference_replication_factor}"
+                        )
 
 
 if __name__ == "__main__":

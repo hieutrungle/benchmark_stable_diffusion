@@ -103,7 +103,7 @@ def save_images(
     plt.close()
 
 
-@timeout.timeout()
+@timeout.timeout(60)
 def benchmark(
     num_prompt,
     num_images_per_prompt,

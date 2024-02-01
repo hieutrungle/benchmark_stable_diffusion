@@ -177,7 +177,7 @@ def main():
     for num_prompt in range(1, 2):
         for inference_replication_factor in inference_replication_factors:
             for num_images_per_prompt in num_images_per_prompts:
-                prompt["a shiba inu in a zen garden, acrylic painting"]
+                prompt = ["a shiba inu in a zen garden, acrylic painting"]
                 prompt = [prompt[0]] * (num_images_per_prompt / 2)
                 for n_ipu in n_ipus:
                     logger.log(

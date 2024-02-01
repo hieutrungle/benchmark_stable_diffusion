@@ -178,7 +178,7 @@ def main():
     # inference_device_iterations = [2**i for i in range(4)]
     # inference_replication_factors = [2**i for i in range(4)]
 
-    prompt = "a shiba inu in a zen garden, acrylic painting"
+    prompt = "a shiba inu in a zen garden, acrylic painting" * num_images_per_prompts[0]
 
     for num_prompt in range(1, 2):
         for inference_replication_factor in inference_replication_factors:

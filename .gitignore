@@ -10,7 +10,6 @@ weights.onnx
 **/*.sh
 **/*.in
 core.*
-*out.*
 **/*.tar.*
 *.ipynb_checkpoints
 *.tamulauncher*

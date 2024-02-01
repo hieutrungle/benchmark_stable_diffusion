@@ -116,7 +116,8 @@ def main():
 
     n_ipus = [2**i for i in range(5)]
     # num_prompts = 1
-    num_images_per_prompts = [2**i for i in range(4)]
+    num_images_per_prompts = 4
+    # num_images_per_prompts = [2**i for i in range(4)]
     inference_device_iterations = [2**i for i in range(4)]
     inference_replication_factors = [2**i for i in range(4)]
 

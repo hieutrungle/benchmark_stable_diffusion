@@ -17,6 +17,7 @@ import poptorch
 import matplotlib.pyplot as plt
 import timer
 import timeout
+import traceback
 
 from models import PipelinedVAE, PipelinedCLIPTextModel, PipelinedUnet
 
@@ -200,8 +201,9 @@ def main():
                                 f"Timeout: n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iteration_{inference_device_iteration}_inference_replication_factor_{inference_replication_factor}"
                             )
                         except Exception as e:
+                            traceback.print_exc()
                             logger.log(
-                                f"Exception: {e} for n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iteration_{inference_device_iteration}_inference_replication_factor_{inference_replication_factor}"
+                                f"Error: n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_device_iteration_{inference_device_iteration}_inference_replication_factor_{inference_replication_factor}"
                             )
 
 

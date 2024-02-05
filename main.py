@@ -9,17 +9,15 @@
 import os
 import utils
 import logger
-from PIL import Image
 import torch
-import torch.nn as nn
-import torchvision
-import poptorch
-import matplotlib.pyplot as plt
-import timer
-import timeout
-import traceback
 import ipu_benchmark
-from optimum.graphcore.diffusers import IPUStableDiffusionPipeline
+import gpu_benchmark
+import argparse
+
+try:
+    import poptorch
+except ImportError:
+    print("poptorch not installed")
 
 
 def mkdir_if_not_exists(path):
@@ -56,52 +54,29 @@ def ipu_validation_options(replication_factor=1, device_iterations=1):
     return opts
 
 
-@timer.Timer(logger_fn=logger.log)
 def main():
-    n_ipus = [2**i for i in range(5)]
-    # num_prompts = 1
-    num_images_per_prompts = [2**i for i in range(5)]
-    inference_replication_factors = [2**i for i in range(1)]
-    # num_images_per_prompts = [2**i for i in range(4)]
-    # inference_device_iterations = [2**i for i in range(4)]
-    # inference_replication_factors = [2**i for i in range(4)]
+    args = create_argparser().parse_args()
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    log_dir = os.path.join(current_dir, "logs")
+    utils.mkdir_not_exists(log_dir)
+    logger.configure(dir=log_dir)
+    prompt = ["a shiba inu in a zen garden, acrylic painting"]
 
-    for num_prompt in range(1, 2):
-        for inference_replication_factor in inference_replication_factors:
-            for num_images_per_prompt in num_images_per_prompts:
-                prompt = ["a shiba inu in a zen garden, acrylic painting"]
-                if num_images_per_prompt > 1:
-                    prompt = [prompt[0]] * (num_images_per_prompt // 2)
-                for n_ipu in n_ipus:
-                    logger.log(
-                        f"\nn_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_replication_factor_{inference_replication_factor}"
-                    )
-                    try:
-                        ipu_benchmark.benchmark(
-                            num_prompt,
-                            num_images_per_prompt,
-                            n_ipu,
-                            inference_replication_factor,
-                            prompt,
-                        )
-                    except timeout.TimeoutError:
-                        logger.log(
-                            f"Timeout: n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_replication_factor_{inference_replication_factor}"
-                        )
-                    except Exception as e:
-                        traceback.print_exc()
-                        logger.log(
-                            f"Error: n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_replication_factor_{inference_replication_factor}"
-                        )
+    if args.device == "ipu":
+        ipu_benchmark.benchmark(prompt)
+    elif args.device == "gpu":
+        gpu_benchmark.benchmark(prompt)
+
+
+def create_argparser() -> argparse.ArgumentParser:
+    """Parses command line arguments."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--device", "-d", type=str, required=True)
+    parser.add_argument("--verbose", "-v", type=bool, default=False)
+    return parser
 
 
 if __name__ == "__main__":
-    current_dir = os.path.dirname(os.path.realpath(__file__))
-
-    # Set up
-    log_dir = os.path.join(current_dir, "logs")
-    utils.mkdir_if_not_exists(log_dir)
-    logger.configure(dir=log_dir)
     main()
 
     # # pretrained model and scheduler

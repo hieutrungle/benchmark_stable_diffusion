@@ -9,7 +9,7 @@ import traceback
 
 
 @timer.Timer(logger_fn=logger.log)
-def benchmark(prompt):
+def benchmark(prompts):
     n_ipus = [2**i for i in range(5)]
     # num_prompts = 1
     num_images_per_prompts = [2**i for i in range(5)]
@@ -19,7 +19,7 @@ def benchmark(prompt):
         for inference_replication_factor in inference_replication_factors:
             for num_images_per_prompt in num_images_per_prompts:
                 if num_images_per_prompt > 1:
-                    prompt = [prompt[0]] * (num_images_per_prompt // 2)
+                    prompts = [prompts[0]] * num_images_per_prompt
                 for n_ipu in n_ipus:
                     logger.log(
                         f"\nn_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_replication_factor_{inference_replication_factor}"
@@ -30,7 +30,7 @@ def benchmark(prompt):
                             num_images_per_prompt,
                             n_ipu,
                             inference_replication_factor,
-                            prompt,
+                            prompts,
                         )
                     except timeout.TimeoutError:
                         logger.log(
@@ -56,7 +56,7 @@ def benchmark_single(
     num_images_per_prompt,
     n_ipu,
     inference_replication_factor,
-    prompt,
+    prompts,
 ):
     current_dir = os.path.dirname(os.path.realpath(__file__))
     cache_dir = os.path.join(current_dir, "cache")
@@ -89,15 +89,15 @@ def benchmark_single(
     image_width = 768  # stabilityai/stable-diffusion-2
     image_height = 768  # stabilityai/stable-diffusion-2
     # pipe(
-    #     prompt,
+    #     prompts,
     #     # height=image_height,
     #     # width=image_width,
     #     guidance_scale=7.5,
     # )
-    pipe(prompt, guidance_scale=7.5)
+    pipe(prompts, guidance_scale=7.5)
 
     with timer.Timer(logger_fn=logger.log):
-        images = pipe(prompt, guidance_scale=7.5).images
+        images = pipe(prompts, guidance_scale=7.5).images
 
     utils.save_images(
         images,
@@ -105,6 +105,6 @@ def benchmark_single(
         num_images_per_prompt,
         n_ipu,
         inference_replication_factor,
-        prompt,
+        prompts,
     )
     pipe.detach_from_device()

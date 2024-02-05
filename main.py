@@ -58,7 +58,7 @@ def main():
     args = create_argparser().parse_args()
     current_dir = os.path.dirname(os.path.realpath(__file__))
     log_dir = os.path.join(current_dir, "logs")
-    utils.mkdir_not_exists(log_dir)
+    utils.mkdir_if_not_exists(log_dir)
     logger.configure(dir=log_dir)
     prompt = ["a shiba inu in a zen garden, acrylic painting"]
 

@@ -72,6 +72,8 @@ def create_argparser() -> argparse.ArgumentParser:
     """Parses command line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", "-d", type=str, required=True)
+    parser.add_argument("--num_prompt", "-np", type=int, default=1)
+    parser.add_argument("--replication_factor", "-r", type=int, default=1)
     parser.add_argument("--verbose", "-v", type=bool, default=False)
     return parser
 

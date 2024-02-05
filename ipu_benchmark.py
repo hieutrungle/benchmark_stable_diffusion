@@ -47,6 +47,7 @@ def benchmark(prompt):
                             f"KeyboardInterrupt: n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_replication_factor_{inference_replication_factor}"
                         )
                         RuntimeError("KeyboardInterrupt")
+                        exit()
 
 
 @timeout.timeout(60 * 30)

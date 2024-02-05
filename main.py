@@ -18,9 +18,7 @@ import matplotlib.pyplot as plt
 import timer
 import timeout
 import traceback
-
-from models import PipelinedVAE, PipelinedCLIPTextModel, PipelinedUnet
-
+import ipu_benchmark
 from optimum.graphcore.diffusers import IPUStableDiffusionPipeline
 
 
@@ -58,111 +56,6 @@ def ipu_validation_options(replication_factor=1, device_iterations=1):
     return opts
 
 
-def save_images(
-    images,
-    num_prompt,
-    num_images_per_prompt,
-    n_ipu,
-    inference_replication_factor,
-    prompt,
-):
-    num_images = len(images)
-
-    fig, axes = plt.subplots(num_prompt, num_images_per_prompt, constrained_layout=True)
-    # fig.set_size_inches(9, 9)
-
-    for i, image in enumerate(images):
-        if num_prompt == 1 and num_images_per_prompt == 1:
-            ax = axes
-        elif num_prompt == 1:
-            ax = axes[i % num_images_per_prompt]
-        else:
-            ax = axes[i // num_images_per_prompt, i % num_images_per_prompt]
-        ax.imshow(image)
-        ax.axis("off")
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-        ax.set_aspect("equal")
-
-    fig.suptitle(f"prompt: {prompt}")
-    # fig.tight_layout()
-    # fig.subplots_adjust(wspace=0, hspace=0)
-
-    current_dir = os.path.dirname(os.path.realpath(__file__))
-    image_dir = os.path.join(current_dir, "images")
-    utils.mkdir_if_not_exists(image_dir)
-    fig.savefig(
-        os.path.join(
-            image_dir,
-            f"n_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_replication_factor_{inference_replication_factor}.png",
-        ),
-        dpi=150,
-    )
-    plt.close()
-
-
-@timeout.timeout(60 * 30)
-def benchmark(
-    num_prompt,
-    num_images_per_prompt,
-    n_ipu,
-    inference_replication_factor,
-    prompt,
-):
-    current_dir = os.path.dirname(os.path.realpath(__file__))
-    cache_dir = os.path.join(current_dir, "cache")
-    utils.mkdir_if_not_exists(cache_dir)
-
-    common_ipu_config_kwargs = {
-        "enable_half_partials": True,
-        "executable_cache_dir": "./exe_cache",
-        "inference_replication_factor": inference_replication_factor,
-    }
-
-    pipe = IPUStableDiffusionPipeline.from_pretrained(
-        "stabilityai/stable-diffusion-2",
-        revision="fp16",
-        torch_dtype=torch.float16,
-        cache_dir=cache_dir,
-        n_ipu=n_ipu,
-        num_prompts=num_prompt,
-        num_images_per_prompt=num_images_per_prompt,
-        # unet_ipu_config=None,
-        # text_encoder_ipu_config=None,
-        # vae_ipu_config=None,
-        # safety_checker_ipu_config=None,
-        common_ipu_config_kwargs=common_ipu_config_kwargs,
-    )
-    pipe.enable_attention_slicing()
-
-    # image_width = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_WIDTH", default=512)
-    # image_height = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_HEIGHT", default=512)
-    image_width = 768  # stabilityai/stable-diffusion-2
-    image_height = 768  # stabilityai/stable-diffusion-2
-    # pipe(
-    #     prompt,
-    #     # height=image_height,
-    #     # width=image_width,
-    #     guidance_scale=7.5,
-    # )
-    pipe(prompt, guidance_scale=7.5)
-
-    with timer.Timer(logger_fn=logger.log):
-        images = pipe(prompt, guidance_scale=7.5).images
-
-    save_images(
-        images,
-        num_prompt,
-        num_images_per_prompt,
-        n_ipu,
-        inference_replication_factor,
-        prompt,
-    )
-    pipe.detach_from_device()
-
-
 @timer.Timer(logger_fn=logger.log)
 def main():
     n_ipus = [2**i for i in range(5)]
@@ -184,7 +77,7 @@ def main():
                         f"\nn_ipu_{n_ipu}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}_inference_replication_factor_{inference_replication_factor}"
                     )
                     try:
-                        benchmark(
+                        ipu_benchmark.benchmark(
                             num_prompt,
                             num_images_per_prompt,
                             n_ipu,

@@ -5,3 +5,4 @@ Pillow
 matplotlib
 tomesd
 DeepCache
+xformers

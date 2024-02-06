@@ -1,7 +1,1 @@
 graphcore-cloud-tools[logger] @ git+https://github.com/graphcore/graphcore-cloud-tools@v0.3
-diffusers[torch]
-optimum-graphcore
-Pillow
-matplotlib
-tomesd
-DeepCache

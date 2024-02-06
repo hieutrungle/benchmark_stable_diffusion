@@ -10,8 +10,6 @@ import os
 import utils
 import logger
 import torch
-import ipu_benchmark
-import gpu_benchmark
 import argparse
 
 try:
@@ -60,12 +58,16 @@ def main():
     log_dir = os.path.join(current_dir, "logs")
     utils.mkdir_if_not_exists(log_dir)
     logger.configure(dir=log_dir)
-    prompts = ["a shiba inu in a zen garden, acrylic painting"]
+    prompt = "a shiba inu in a zen garden, acrylic painting"
 
     if args.device == "ipu":
-        ipu_benchmark.benchmark(prompts)
+        import ipu_benchmark
+
+        ipu_benchmark.benchmark(prompt)
     elif args.device == "gpu":
-        gpu_benchmark.benchmark(prompts)
+        import gpu_benchmark
+
+        gpu_benchmark.benchmark(prompt)
 
 
 def create_argparser() -> argparse.ArgumentParser:

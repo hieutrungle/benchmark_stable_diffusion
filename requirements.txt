@@ -3,3 +3,5 @@ optimum-graphcore==0.7
 transformers==4.29.2
 Pillow
 matplotlib
+tomesd
+DeepCache

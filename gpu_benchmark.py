@@ -1,43 +1,84 @@
 from diffusers import StableDiffusionPipeline, EulerDiscreteScheduler
 import torch
+import os
+import utils
+import timer
+import logger
+from xformers.ops import MemoryEfficientAttentionFlashAttentionOp
+import accelerate
+from DeepCache import DeepCacheSDHelper
+import tomesd
 
 
 def benchmark(prompt):
-    model_id = "stabilityai/stable-diffusion-2"
 
-    # Use the Euler scheduler here instead
-    scheduler = EulerDiscreteScheduler.from_pretrained(
-        model_id, subfolder="scheduler", cache_dir="./cache"
-    )
-    pipe = StableDiffusionPipeline.from_pretrained(
-        model_id, scheduler=scheduler, torch_dtype=torch.float16, cache_dir="./cache"
-    )
-    pipe = pipe.to("cuda")
+    # Optimization
+    torch.backends.cudnn.benchmark = True
 
-    image = pipe(prompt).images[0]
+    # Benchmarking
+    num_devices = [2**i for i in range(1)]
+    num_images_per_prompts = [2**i for i in range(10)]
+    inference_replication_factor = 1
 
-    image.save("astronaut_rides_horse.png")
+    for num_prompt in range(1, 2):
+        for num_images_per_prompt in num_images_per_prompts:
+            prompts = [prompt] * num_images_per_prompt * num_prompt
+            for num_device in num_devices:
+                logger.log(
+                    f"\nnum_device_{num_device}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}"
+                )
+                benchmark_single(
+                    num_prompt,
+                    num_images_per_prompt,
+                    num_device,
+                    inference_replication_factor,
+                    prompts,
+                )
 
 
 def benchmark_single(
     num_prompt,
     num_images_per_prompt,
-    n_ipu,
+    num_device,
     inference_replication_factor,
-    prompt,
+    prompts,
 ):
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    cache_dir = os.path.join(current_dir, "cache")
+    utils.mkdir_if_not_exists(cache_dir)
+
     model_id = "stabilityai/stable-diffusion-2"
 
     # Use the Euler scheduler here instead
     scheduler = EulerDiscreteScheduler.from_pretrained(
-        model_id, subfolder="scheduler", cache_dir="./cache"
+        model_id, subfolder="scheduler", cache_dir=cache_dir
     )
     pipe = StableDiffusionPipeline.from_pretrained(
-        model_id, scheduler=scheduler, torch_dtype=torch.float16, cache_dir="./cache"
+        model_id,
+        scheduler=scheduler,
+        torch_dtype=torch.float16,
+        use_safetensors=True,
+        cache_dir=cache_dir,
     )
+    pipe.unet.to(memory_format=torch.channels_last)
+    pipe.vae.to(memory_format=torch.channels_last)
+    pipe.text_encoder.to(memory_format=torch.channels_last)
+
     pipe = pipe.to("cuda")
+    # pipe.enable_attention_slicing()
+    pipe.enable_vae_slicing()
+    pipe.enable_xformers_memory_efficient_attention()
+    helper = DeepCacheSDHelper(pipe=pipe)
+    helper.set_params(
+        cache_interval=3,
+        cache_branch_id=0,
+    )
+    helper.enable()
 
-    prompt = "a photo of an astronaut riding a horse on mars"
-    image = pipe(prompt).images[0]
+    tomesd.apply_patch(pipe, ratio=0.5)
 
-    image.save("astronaut_rides_horse.png")
+    with timer.Timer(logger_fn=logger.log):
+        images = pipe(prompts).images
+    # image = pipe(prompts).images[0]
+
+    # image.save("astronaut_rides_horse.png")

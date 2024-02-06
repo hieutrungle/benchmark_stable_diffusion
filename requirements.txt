@@ -1,4 +1,5 @@
 graphcore-cloud-tools[logger] @ git+https://github.com/graphcore/graphcore-cloud-tools@v0.3
+diffusers[torch]==0.9
 optimum-graphcore==0.7
 transformers==4.29.2
 Pillow

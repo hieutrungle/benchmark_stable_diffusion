@@ -20,3 +20,4 @@ notebooks/
 scripts/
 sigmap.egg-info/
 *test*
+stats*

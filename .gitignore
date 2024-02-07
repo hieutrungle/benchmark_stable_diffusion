@@ -7,7 +7,6 @@ weights.onnx
 *tmp*
 **/*.log
 **/*.zip
-**/*.sh
 **/*.in
 core.*
 **/*.tar.*
@@ -21,3 +20,4 @@ scripts/
 sigmap.egg-info/
 *test*
 *stats_*
+*job*

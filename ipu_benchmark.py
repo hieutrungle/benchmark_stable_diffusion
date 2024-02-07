@@ -12,8 +12,9 @@ import traceback
 def benchmark(prompt):
     n_ipus = [2**i for i in range(5)]
     inference_replication_factors = [2**i for i in range(1)]
+    num_prompts = [2**i for i in range(9)]
 
-    for num_prompt in range(1, 2):
+    for num_prompt in num_prompts:
         for inference_replication_factor in inference_replication_factors:
             prompts = [prompt] * num_prompt
             for n_ipu in n_ipus:

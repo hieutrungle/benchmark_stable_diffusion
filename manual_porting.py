@@ -73,13 +73,27 @@ def benchmark_single(prompts, model_id):
         cache_dir=cache_dir,
     )
     pipe.text_encoder.parallelize(ipu_conf)
-    # pipe.vae = PipelinedVAE.from_pretrained(
-    #     model_id,
-    #     subfolder="vae",
-    #     use_safetensors=True,
-    #     cache_dir=cache_dir,
-    # )
-    # pipe.vae.parallelize(ipu_conf)
+
+    pipe.unet = PipelinedUnet.from_pretrained(
+        model_id,
+        subfolder="unet",
+        use_safetensors=True,
+        cache_dir=cache_dir,
+    )
+    pipe.unet.parallelize(ipu_conf)
+
+    pipe.vae = PipelinedVAE.from_pretrained(
+        model_id,
+        subfolder="vae",
+        use_safetensors=True,
+        cache_dir=cache_dir,
+    )
+    pipe.vae.parallelize(ipu_conf)
+
+    inference_options = ipu_inference_options(replication_factor=1, device_iterations=1)
+    pipe.text_encoder = poptorch.inferenceModel(text_encoder, inference_options)
+    pipe.unet = poptorch.inferenceModel(unet, inference_options)
+    pipe.vae = poptorch.inferenceModel(vae, inference_options)
 
     pipe(prompts, guidance_scale=7.5)
     with timer.Timer(logger_fn=logger.log):
@@ -87,13 +101,13 @@ def benchmark_single(prompts, model_id):
 
     exit()
 
-    # # pretrained model and scheduler
-    # vae = PipelinedVAE.from_pretrained(
-    #     model_id,
-    #     subfolder="vae",
-    #     use_safetensors=True,
-    #     cache_dir=cache_dir,
-    # )
+    # pretrained model and scheduler
+    vae = PipelinedVAE.from_pretrained(
+        model_id,
+        subfolder="vae",
+        use_safetensors=True,
+        cache_dir=cache_dir,
+    )
     tokenizer = CLIPTokenizer.from_pretrained(
         model_id,
         subfolder="tokenizer",

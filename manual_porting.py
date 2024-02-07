@@ -67,14 +67,21 @@ def benchmark_single(prompts, model_id):
     pipe = StableDiffusionPipeline.from_pretrained(
         model_id, torch_dtype=torch.float16, cache_dir=cache_dir
     )
-    pipe.vae = PipelinedVAE.from_pretrained(
+    ipu_conf = {}
+    pipe.text_encoder = PipelinedCLIPTextModel.from_pretrained(
         model_id,
-        subfolder="vae",
+        subfolder="text_encoder",
         use_safetensors=True,
         cache_dir=cache_dir,
     )
-    ipu_conf = {}
-    pipe.vae.parallelize(ipu_conf)
+    pipe.text_encoder.parallelize(ipu_conf)
+    # pipe.vae = PipelinedVAE.from_pretrained(
+    #     model_id,
+    #     subfolder="vae",
+    #     use_safetensors=True,
+    #     cache_dir=cache_dir,
+    # )
+    # pipe.vae.parallelize(ipu_conf)
 
     pipe(prompts, guidance_scale=7.5)
     with timer.Timer(logger_fn=logger.log):

@@ -9,7 +9,7 @@ import traceback
 
 
 @timer.Timer(logger_fn=logger.log)
-def benchmark(prompt):
+def benchmark(prompt, model_id):
     n_ipus = [2**i for i in range(5)]
     inference_replication_factors = [2**i for i in range(1)]
     num_prompts = [2**i for i in range(2, 8)]
@@ -27,6 +27,7 @@ def benchmark(prompt):
                         n_ipu,
                         inference_replication_factor,
                         prompts,
+                        model_id,
                     )
                 except timeout.TimeoutError:
                     logger.log(
@@ -48,10 +49,7 @@ def benchmark(prompt):
 
 @timeout.timeout(60 * 30)
 def benchmark_single(
-    num_prompt,
-    n_ipu,
-    inference_replication_factor,
-    prompts,
+    num_prompt, n_ipu, inference_replication_factor, prompts, model_id
 ):
     current_dir = os.path.dirname(os.path.realpath(__file__))
     cache_dir = os.path.join(current_dir, "cache")
@@ -64,7 +62,7 @@ def benchmark_single(
     }
 
     pipe = IPUStableDiffusionPipeline.from_pretrained(
-        "stabilityai/stable-diffusion-2",
+        model_id,
         revision="fp16",
         torch_dtype=torch.float16,
         cache_dir=cache_dir,
@@ -78,16 +76,6 @@ def benchmark_single(
     )
     pipe.enable_attention_slicing()
 
-    # image_width = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_WIDTH", default=512)
-    # image_height = os.getenv("STABLE_DIFFUSION_TXT2IMG_DEFAULT_HEIGHT", default=512)
-    image_width = 768  # stabilityai/stable-diffusion-2
-    image_height = 768  # stabilityai/stable-diffusion-2
-    # pipe(
-    #     prompts,
-    #     # height=image_height,
-    #     # width=image_width,
-    #     guidance_scale=7.5,
-    # )
     pipe(prompts, guidance_scale=7.5)
 
     with timer.Timer(logger_fn=logger.log):

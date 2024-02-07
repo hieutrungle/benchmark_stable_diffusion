@@ -10,7 +10,7 @@ from DeepCache import DeepCacheSDHelper
 import tomesd
 
 
-def benchmark(prompt):
+def benchmark(prompt, model_id):
 
     # Optimization
     torch.backends.cudnn.benchmark = True
@@ -27,27 +27,13 @@ def benchmark(prompt):
                 logger.log(
                     f"\nnum_device_{num_device}_num_prompt_{num_prompt}_num_images_per_prompt_{num_images_per_prompt}"
                 )
-                benchmark_single(
-                    num_prompt,
-                    num_images_per_prompt,
-                    num_device,
-                    inference_replication_factor,
-                    prompts,
-                )
+                benchmark_single(prompts, model_id)
 
 
-def benchmark_single(
-    num_prompt,
-    num_images_per_prompt,
-    num_device,
-    inference_replication_factor,
-    prompts,
-):
+def benchmark_single(prompts, model_id):
     current_dir = os.path.dirname(os.path.realpath(__file__))
     cache_dir = os.path.join(current_dir, "cache")
     utils.mkdir_if_not_exists(cache_dir)
-
-    model_id = "stabilityai/stable-diffusion-2"
 
     # Use the Euler scheduler here instead
     scheduler = EulerDiscreteScheduler.from_pretrained(
@@ -79,6 +65,3 @@ def benchmark_single(
 
     with timer.Timer(logger_fn=logger.log):
         images = pipe(prompts).images
-    # image = pipe(prompts).images[0]
-
-    # image.save("astronaut_rides_horse.png")

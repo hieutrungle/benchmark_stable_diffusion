@@ -25,20 +25,21 @@ def main():
     utils.mkdir_if_not_exists(log_dir)
     logger.configure(dir=log_dir)
     prompt = "a shiba inu in a zen garden, acrylic painting"
+    model_id = "stabilityai/stable-diffusion-2-1"
 
     if args.device == "ipu":
         import ipu_benchmark
 
-        ipu_benchmark.benchmark(prompt)
+        ipu_benchmark.benchmark(prompt, model_id)
     elif args.device == "gpu":
         import gpu_benchmark
 
-        gpu_benchmark.benchmark(prompt)
+        gpu_benchmark.benchmark(prompt, model_id)
 
     elif args.device == "ipu_manual":
         import manual_porting
 
-        manual_porting.benchmark(prompt)
+        manual_porting.benchmark(prompt, model_id)
 
 
 def create_argparser() -> argparse.ArgumentParser:

@@ -50,21 +50,20 @@ def ipu_inference_options(replication_factor=1, device_iterations=1):
 
 
 @timer.Timer(logger_fn=logger.log)
-def benchmark(prompt):
+def benchmark(prompt, model_id):
     num_prompts = [2**i for i in range(0, 2)]
 
     for num_prompt in num_prompts:
         prompts = [prompt] * num_prompt
         logger.log(f"\nnum_prompt_{num_prompt}")
-        benchmark_single(prompts)
+        benchmark_single(prompts, model_id)
 
 
-def benchmark_single(prompts):
+def benchmark_single(prompts, model_id):
     current_dir = os.path.dirname(os.path.realpath(__file__))
     cache_dir = os.path.join(current_dir, "cache")
     utils.mkdir_if_not_exists(cache_dir)
 
-    model_id = "stabilityai/stable-diffusion-2-1"
     pipe = StableDiffusionPipeline.from_pretrained(
         model_id, torch_dtype=torch.float16, cache_dir=cache_dir
     )
@@ -76,6 +75,11 @@ def benchmark_single(prompts):
     )
     ipu_conf = {}
     pipe.vae.parallelize(ipu_conf)
+
+    pipe(prompts, guidance_scale=7.5)
+    with timer.Timer(logger_fn=logger.log):
+        images = pipe(prompts, guidance_scale=7.5).images
+
     exit()
 
     # # pretrained model and scheduler

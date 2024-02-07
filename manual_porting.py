@@ -64,9 +64,7 @@ def benchmark_single(prompts, model_id):
     cache_dir = os.path.join(current_dir, "cache")
     utils.mkdir_if_not_exists(cache_dir)
 
-    pipe = StableDiffusionPipeline.from_pretrained(
-        model_id, torch_dtype=torch.float16, cache_dir=cache_dir
-    )
+    pipe = StableDiffusionPipeline.from_pretrained(model_id, cache_dir=cache_dir)
     ipu_conf = {}
     pipe.text_encoder = PipelinedCLIPTextModel.from_pretrained(
         model_id,

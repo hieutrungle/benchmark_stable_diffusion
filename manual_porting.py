@@ -74,6 +74,7 @@ def benchmark_single(prompts):
         use_safetensors=True,
         cache_dir=cache_dir,
     )
+    ipu_conf = {}
     pipe.vae.parallelize(ipu_conf)
     exit()
 

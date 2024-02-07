@@ -35,6 +35,11 @@ def main():
 
         gpu_benchmark.benchmark(prompt)
 
+    elif args.device == "ipu_manual":
+        import manual_porting
+
+        manual_porting.benchmark(prompt)
+
 
 def create_argparser() -> argparse.ArgumentParser:
     """Parses command line arguments."""

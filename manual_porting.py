@@ -4,14 +4,14 @@ from diffusers import (
     AutoencoderKL,
     UNet2DConditionModel,
     PNDMScheduler,
-    StableDiffusionPipeline
+    StableDiffusionPipeline,
 )
 from transformers import CLIPTextModel, CLIPTokenizer
 import os
 import utils
 import logger
 import torch
-import argparse
+import timer
 from models import PipelinedVAE, PipelinedCLIPTextModel, PipelinedUnet
 
 try:
@@ -48,20 +48,42 @@ def ipu_inference_options(replication_factor=1, device_iterations=1):
 
     return opts
 
-def manual_porting():
+
+@timer.Timer(logger_fn=logger.log)
+def benchmark(prompt):
+    num_prompts = [2**i for i in range(0, 2)]
+
+    for num_prompt in num_prompts:
+        prompts = [prompt] * num_prompt
+        logger.log(f"\nnum_prompt_{num_prompt}")
+        benchmark_single(prompts)
+
+
+def benchmark_single(prompts):
     current_dir = os.path.dirname(os.path.realpath(__file__))
     cache_dir = os.path.join(current_dir, "cache")
     utils.mkdir_if_not_exists(cache_dir)
-    
+
     model_id = "stabilityai/stable-diffusion-2-1"
-    ipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
-    # pretrained model and scheduler
-    vae = PipelinedVAE.from_pretrained(
+    pipe = StableDiffusionPipeline.from_pretrained(
+        model_id, torch_dtype=torch.float16, cache_dir=cache_dir
+    )
+    pipe.vae = PipelinedVAE.from_pretrained(
         model_id,
         subfolder="vae",
         use_safetensors=True,
         cache_dir=cache_dir,
     )
+    pipe.vae.parallelize(ipu_conf)
+    exit()
+
+    # # pretrained model and scheduler
+    # vae = PipelinedVAE.from_pretrained(
+    #     model_id,
+    #     subfolder="vae",
+    #     use_safetensors=True,
+    #     cache_dir=cache_dir,
+    # )
     tokenizer = CLIPTokenizer.from_pretrained(
         model_id,
         subfolder="tokenizer",
@@ -116,10 +138,10 @@ def manual_porting():
     with torch.no_grad():
         text_embeddings = inf_text_encoder(text_inputs.input_ids)[0]
 
-    logger.log(f"\ntext_inputs:")
-    logger.log(text_inputs)
-    logger.log(f"tokenizer.model_max_length: {tokenizer.model_max_length}")
-    logger.log(f"text_embeddings.shape: {text_embeddings.shape}")
+    # logger.log(f"\ntext_inputs:")
+    # logger.log(text_inputs)
+    # logger.log(f"tokenizer.model_max_length: {tokenizer.model_max_length}")
+    # logger.log(f"text_embeddings.shape: {text_embeddings.shape}")
 
     # Unconditional embeddings for padding tokens
     max_length = text_inputs.input_ids.shape[-1]
@@ -131,10 +153,10 @@ def manual_porting():
     )
     uncond_embeddings = inf_text_encoder(uncond_inputs.input_ids)[0]
 
-    logger.log(f"\nuncond_inputs:")
-    logger.log(uncond_inputs)
-    logger.log(f"max_length: {max_length}")
-    logger.log(f"uncond_embeddings.shape: {uncond_embeddings.shape}")
+    # logger.log(f"\nuncond_inputs:")
+    # logger.log(uncond_inputs)
+    # logger.log(f"max_length: {max_length}")
+    # logger.log(f"uncond_embeddings.shape: {uncond_embeddings.shape}")
 
     text_embeddings = torch.cat([uncond_embeddings, text_embeddings])
 
@@ -148,7 +170,7 @@ def manual_porting():
     # main loop
     scheduler.set_timesteps(num_inference_steps)
 
-    logger.log(f"scheduler.timesteps: \n{scheduler.timesteps}\n")
+    # logger.log(f"scheduler.timesteps: \n{scheduler.timesteps}\n")
 
     for t in scheduler.timesteps:
         # expand the latents if we are doing classifier-free guidance to avoid doing two forward passes.
